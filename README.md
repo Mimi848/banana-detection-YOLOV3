@@ -18,3 +18,9 @@ Command line usage for object detection using YOLOv3
     ```bash
     python3 image_final_code.py
     ```
+
+    - A live image:
+
+    ```bash
+    python3 live_image_code.py
+    ```

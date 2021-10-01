@@ -7,14 +7,32 @@ import argparse
 import sys
 import numpy as np
 import os.path
-from tkinter import Tk     # from tkinter import Tk for Python 3.x
-from tkinter.filedialog import askopenfilename
 
-Tk().withdraw() # we don't want a full GUI, so keep the root window from appearing
-filename = askopenfilename(
-    title="Choose an image",
-    filetypes=[('image files', ('.png', '.jpg', '.jpeg'))]) # show an "Open" dialog box and return the path to the selected file
+cam = cv.VideoCapture(0)
 
+cv.namedWindow("test")
+
+img_counter = 0
+frame = []
+while True:
+    ret, frame = cam.read()
+    if not ret:
+        print("failed to grab frame")
+        break
+    cv.imshow("test", frame)
+
+    k = cv.waitKey(1)
+    if k%256 == 27:
+        print("Escape hit, closing...")
+        break
+    elif k%256 == 32:
+        frame = frame
+        img_counter += 1
+        break
+
+cam.release()
+
+cv.destroyAllWindows()
 # Initialize the parameters
 confThreshold = 0.5  #Confidence threshold
 nmsThreshold = 0.4   #Non-maximum suppression threshold
@@ -94,38 +112,27 @@ def postprocess(frame, outs):
         height = box[3]
         drawPred(classIds[i], confidences[i], left, top, left + width, top + height)
 
+net = cv.dnn.readNetFromDarknet(modelConfiguration, modelWeights)
+winName = 'Banana detection in OpenCV with YOLOV3'
+cv.namedWindow(winName, cv.WINDOW_NORMAL)
+# Open the image file
+while cv.waitKey(1) < 0:
 
 
-if(filename):
-    net = cv.dnn.readNetFromDarknet(modelConfiguration, modelWeights)
-    winName = 'Banana detection in OpenCV with YOLOV3'
-    cv.namedWindow(winName, cv.WINDOW_NORMAL)
-    # Open the image file
-    frame = cv.imread(filename)
-    outputFile = filename[:-5]+'_yolo_out_py.jpg'
-    while cv.waitKey(1) < 0:
+    # Create a 4D blob from a frame.
+    blob = cv.dnn.blobFromImage(frame, 1/255, (inpWidth, inpHeight), [0,0,0], 1, crop=False)
 
+    # Sets the input to the network
+    net.setInput(blob)
 
-        # Create a 4D blob from a frame.
-        blob = cv.dnn.blobFromImage(frame, 1/255, (inpWidth, inpHeight), [0,0,0], 1, crop=False)
+    # Runs the forward pass to get output of the output layers
+    outs = net.forward(getOutputsNames(net))
 
-        # Sets the input to the network
-        net.setInput(blob)
+    # Remove the bounding boxes with low confidence
+    postprocess(frame, outs)
 
-        # Runs the forward pass to get output of the output layers
-        outs = net.forward(getOutputsNames(net))
-
-        # Remove the bounding boxes with low confidence
-        postprocess(frame, outs)
-
-        # Write the frame with the detection boxes
-        if (filename):
-            cv.imwrite(outputFile, frame.astype(np.uint8))
-
-        print("Done processing !!!")
-        print("Output file is stored as ", outputFile)
-
-        cv.imshow(winName, frame)
-        cv.waitKey(3000)
-        sys.exit(1)
+    print("Done processing !!!")
+    cv.imshow(winName, frame)
+    cv.waitKey(3000)
+    sys.exit(1)
 
